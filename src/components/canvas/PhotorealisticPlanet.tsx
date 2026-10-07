@@ -111,9 +111,18 @@ export function PhotorealisticPlanet({ body }: PhotorealisticPlanetProps) {
     // Orbital revolution around parent star / planet
     if (body.orbitRadius && body.orbitSpeed && groupRef.current && !isSurfaceMode) {
       const angle = state.clock.getElapsedTime() * body.orbitSpeed * timeSpeed * 0.4;
-      const center = body.orbitCenter || [0, 0, 0];
+      let center = body.orbitCenter || [0, 0, 0];
+      if (body.parentBodyId) {
+        const parentPos = celestialRegistry.getWorldPosition(body.parentBodyId);
+        if (parentPos) {
+          center = [parentPos.x, parentPos.y, parentPos.z];
+        }
+      }
       groupRef.current.position.x = center[0] + Math.cos(angle) * body.orbitRadius;
       groupRef.current.position.z = center[2] + Math.sin(angle) * body.orbitRadius;
+      if (body.parentBodyId) {
+        groupRef.current.position.y = center[1] + Math.sin(angle * 0.5) * 1.5;
+      }
     }
 
     // Axial rotation

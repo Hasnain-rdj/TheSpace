@@ -29,6 +29,7 @@ export function NavigationHUD() {
   const toggleDataPanel = useSpaceStore((s) => s.toggleDataPanel);
   const toggleMultiverseModal = useSpaceStore((s) => s.toggleMultiverseModal);
   const toggleNasaLiveFeed = useSpaceStore((s) => s.toggleNasaLiveFeed);
+  const selectObject = useSpaceStore((s) => s.selectObject);
 
   const [utcTime, setUtcTime] = useState<string>('');
 
@@ -49,15 +50,29 @@ export function NavigationHUD() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-30 px-3 md:px-6 py-2.5 flex items-center justify-between border-b border-cyan-500/15 bg-slate-950/70 backdrop-blur-xl">
-      {/* Brand Identity */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-cyan-950/80 border border-cyan-400/40 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-          <Sparkles className="w-4 h-4 text-cyan-300" />
+    <header className="fixed top-0 left-0 right-0 z-30 px-3 md:px-6 py-2 flex items-center justify-between border-b border-cyan-500/15 bg-slate-950/75 backdrop-blur-xl">
+      {/* Brand Identity & Logo */}
+      <button
+        onClick={() => {
+          selectObject('earth');
+          cosmicAudio.playSelectChime();
+        }}
+        className="group flex items-center gap-3 text-left focus:outline-none cursor-pointer"
+        title="TheSpace - Return to Earth / Home"
+      >
+        <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden p-0.5 bg-gradient-to-br from-cyan-400/40 via-purple-500/20 to-blue-600/40 border border-cyan-400/40 shadow-[0_0_20px_rgba(6,182,212,0.35)] group-hover:scale-105 group-hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all duration-300 shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="TheSpace Cosmic Logo"
+            className="w-full h-full object-cover rounded-[10px]"
+          />
+          <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/20 pointer-events-none" />
         </div>
+
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-sm md:text-base font-bold tracking-wider text-white uppercase font-sans">
+            <h1 className="text-sm md:text-base font-bold tracking-wider text-white uppercase font-sans group-hover:text-cyan-300 transition-colors">
               TheSpace
             </h1>
             <span className="hidden sm:inline-block px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
@@ -71,7 +86,7 @@ export function NavigationHUD() {
             {utcTime || 'SYNCHRONIZING ORBITAL TIME...'}
           </div>
         </div>
-      </div>
+      </button>
 
       {/* Center Search Bar (Supports Planets & Google Maps Landmarks) */}
       <div className="flex items-center gap-2">
