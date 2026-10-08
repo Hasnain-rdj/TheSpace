@@ -139,7 +139,7 @@ export function CelestialBody({ body }: CelestialBodyProps) {
           imageUrl={body.imageUrl}
         />
       ) : body.visuals.isQuantum ? (
-        <QuantumRealm position={[0, 0, 0]} size={body.size} />
+        <QuantumRealm position={[0, 0, 0]} size={body.size} imageUrl={body.imageUrl} id={body.id} />
       ) : (
         <mesh ref={meshRef}>
           <sphereGeometry args={[body.size, 64, 64]} />

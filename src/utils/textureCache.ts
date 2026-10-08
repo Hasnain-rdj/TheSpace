@@ -33,8 +33,8 @@ export const PLANET_TEXTURE_MAP: Record<string, string> = {
   'multiverse-foam': '/textures/cmb.jpg',
   'observable-universe': '/textures/cmb.jpg',
   'laniakea-supercluster': '/textures/cmb.jpg',
-  'calabi-yau': '/textures/cmb.jpg',
-  'quantum-foam': '/textures/cmb.jpg',
+  'calabi-yau': '/textures/calabi_yau.jpg',
+  'quantum-foam': '/textures/quantum_foam.jpg',
 };
 
 /**

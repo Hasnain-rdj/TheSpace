@@ -163,6 +163,83 @@ class CosmicAudioEngine {
     }
   }
 
+  public playNuclearDetonationSound(power: number = 1.0) {
+    if (!this.ctx || this.ctx.state === 'suspended') return;
+    try {
+      const now = this.ctx.currentTime;
+      // 1. Initial supersonic shockwave crack
+      const crackOsc = this.ctx.createOscillator();
+      const crackGain = this.ctx.createGain();
+      crackOsc.type = 'sawtooth';
+      crackOsc.frequency.setValueAtTime(800, now);
+      crackOsc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+      crackGain.gain.setValueAtTime(0.4 * power, now);
+      crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      crackOsc.connect(crackGain);
+      crackGain.connect(this.ctx.destination);
+      crackOsc.start(now);
+      crackOsc.stop(now + 0.22);
+
+      // 2. Sub-bass seismic tectonic shock (prolonged earthquake rumble)
+      const subOsc = this.ctx.createOscillator();
+      const subGain = this.ctx.createGain();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(65, now + 0.05);
+      subOsc.frequency.exponentialRampToValueAtTime(18, now + 1.8);
+      subGain.gain.setValueAtTime(0.35 * power, now + 0.05);
+      subGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2 * power);
+      subOsc.connect(subGain);
+      subGain.connect(this.ctx.destination);
+      subOsc.start(now + 0.05);
+      subOsc.stop(now + 2.3 * power);
+
+      // 3. Heavy roaring blast wind / turbulence
+      const bufferSize = Math.floor(this.ctx.sampleRate * 1.8);
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+      const noiseFilter = this.ctx.createBiquadFilter();
+      noiseFilter.type = 'lowpass';
+      noiseFilter.frequency.setValueAtTime(650, now);
+      noiseFilter.frequency.exponentialRampToValueAtTime(45, now + 1.6);
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.32 * power, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(this.ctx.destination);
+      noise.start(now);
+    } catch {
+      // Ignore
+    }
+  }
+
+  public playClusterLaunchSound() {
+    if (!this.ctx || this.ctx.state === 'suspended') return;
+    try {
+      const now = this.ctx.currentTime;
+      [0, 0.08, 0.16, 0.24, 0.32].forEach((offset, idx) => {
+        const osc = this.ctx!.createOscillator();
+        const gain = this.ctx!.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400 + idx * 60, now + offset);
+        osc.frequency.exponentialRampToValueAtTime(150, now + offset + 0.25);
+        gain.gain.setValueAtTime(0.08, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx!.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.32);
+      });
+    } catch {
+      // Ignore
+    }
+  }
+
   public playLaserSound() {
     if (!this.ctx || this.ctx.state === 'suspended') return;
     try {
