@@ -38,27 +38,27 @@ export function NasaFeedModal() {
   if (!isNasaLiveFeedOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="w-full max-w-4xl max-h-[88vh] rounded-2xl bg-slate-950/95 border border-cyan-500/30 shadow-[0_0_60px_rgba(6,182,212,0.25)] backdrop-blur-2xl flex flex-col overflow-hidden text-white font-sans"
+        className="w-full max-w-4xl max-h-[92vh] sm:max-h-[88vh] rounded-2xl bg-slate-950/95 border border-cyan-500/30 shadow-[0_0_60px_rgba(6,182,212,0.25)] backdrop-blur-2xl flex flex-col overflow-hidden text-white font-sans"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-cyan-500/20 bg-gradient-to-r from-cyan-950/40 via-slate-900/40 to-transparent">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-cyan-500/20 border border-cyan-400/40 shadow-[0_0_15px_rgba(6,182,212,0.4)]">
-              <Radio className="w-5 h-5 text-cyan-300" />
+        <div className="flex items-center justify-between p-3.5 sm:p-5 border-b border-cyan-500/20 bg-gradient-to-r from-cyan-950/40 via-slate-900/40 to-transparent">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-xl bg-cyan-500/20 border border-cyan-400/40 shadow-[0_0_15px_rgba(6,182,212,0.4)] shrink-0">
+              <Radio className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-300" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold tracking-tight text-white">
-                  NASA OPEN DATA TELEMETRY HUB
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h2 className="text-sm sm:text-base md:text-lg font-bold tracking-tight text-white">
+                  NASA TELEMETRY HUB
                 </h2>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-900/60 text-cyan-200 border border-cyan-500/40">
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-900/60 text-cyan-200 border border-cyan-500/40">
                   LIVE API SYNC
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-[10px] sm:text-xs text-slate-400 font-mono line-clamp-1">
                 Real-Time Feeds from NASA Jet Propulsion Laboratory & IPAC Exoplanet Archive
               </p>
             </div>
@@ -66,7 +66,7 @@ export function NasaFeedModal() {
 
           <button
             onClick={() => toggleNasaLiveFeed(false)}
-            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 sm:p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

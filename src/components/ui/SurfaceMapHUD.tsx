@@ -39,7 +39,7 @@ export function SurfaceMapHUD() {
   ];
 
   return (
-    <div className="fixed top-28 left-4 z-20 flex flex-col gap-2.5 max-w-sm pointer-events-auto">
+    <div className="fixed top-24 sm:top-28 left-2 sm:left-4 z-20 flex flex-col gap-2 max-w-[94vw] sm:max-w-sm pointer-events-auto">
       {/* Surface Mode Toggle Bar */}
       <div className="p-2.5 rounded-2xl bg-slate-950/85 border border-cyan-500/30 backdrop-blur-2xl shadow-[0_0_25px_rgba(6,182,212,0.15)] flex flex-col gap-2 font-mono text-xs text-white">
         <div className="flex items-center justify-between">

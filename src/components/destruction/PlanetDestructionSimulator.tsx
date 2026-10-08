@@ -26,6 +26,7 @@ import {
   Bomb,
   Rocket,
   Layers,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cosmicAudio } from '@/utils/audioSynth';
@@ -1516,6 +1517,8 @@ export function PlanetDestructionSimulator() {
   const [timeScale, setTimeScale] = useState<number>(1.0);
   const [isSoundMuted, setIsSoundMuted] = useState<boolean>(false);
   const [isRestoring, setIsRestoring] = useState<boolean>(false);
+  const [mobileTelemetryOpen, setMobileTelemetryOpen] = useState<boolean>(false);
+  const [mobileArsenalOpen, setMobileArsenalOpen] = useState<boolean>(false);
 
   // Screen-space detonation flash
   const [flash, setFlash] = useState<{ color: string; opacity: number } | null>(null);
@@ -1613,6 +1616,36 @@ export function PlanetDestructionSimulator() {
 
   const status = getAtmosphereStatus();
 
+  const getWeaponName = (w: WeaponType) => {
+    switch (w) {
+      case 'nuke_tsar': return 'Tsar Bomba';
+      case 'nuke_cluster': return 'MIRV Cluster';
+      case 'cruise_missile': return 'Cruise Missile';
+      case 'meteor': return 'Giant Asteroid';
+      case 'laser': return 'Orbital Laser';
+      case 'core_bomb': return 'Core Bomb';
+      case 'freeze': return 'Cryo Beam';
+      case 'slicer': return 'Plasma Slicer';
+      case 'blackhole': return 'Black Hole';
+      default: return 'Weapon';
+    }
+  };
+
+  const getWeaponIcon = (w: WeaponType) => {
+    switch (w) {
+      case 'nuke_tsar': return <Radio className="w-3.5 h-3.5 text-rose-400" />;
+      case 'nuke_cluster': return <Bomb className="w-3.5 h-3.5 text-red-400" />;
+      case 'cruise_missile': return <Rocket className="w-3.5 h-3.5 text-orange-400" />;
+      case 'meteor': return <Flame className="w-3.5 h-3.5 text-amber-400" />;
+      case 'laser': return <Zap className="w-3.5 h-3.5 text-red-400" />;
+      case 'core_bomb': return <AlertTriangle className="w-3.5 h-3.5 text-red-500" />;
+      case 'freeze': return <Snowflake className="w-3.5 h-3.5 text-cyan-400" />;
+      case 'slicer': return <Crosshair className="w-3.5 h-3.5 text-yellow-400" />;
+      case 'blackhole': return <CircleDot className="w-3.5 h-3.5 text-purple-400" />;
+      default: return <Bomb className="w-3.5 h-3.5 text-red-400" />;
+    }
+  };
+
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#020206] text-white select-none font-sans">
       {/* Blinding Screen Detonation Flash Overlay */}
@@ -1666,45 +1699,47 @@ export function PlanetDestructionSimulator() {
       </div>
 
       {/* Header Overlay */}
-      <header className="absolute top-0 left-0 right-0 z-30 px-4 py-3 flex items-center justify-between border-b border-red-500/20 bg-slate-950/80 backdrop-blur-xl">
-        <div className="flex items-center gap-3">
+      <header className="absolute top-0 left-0 right-0 z-30 px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between border-b border-red-500/20 bg-slate-950/80 backdrop-blur-xl gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Link
             href="/"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-slate-300 hover:text-white transition-all shadow-md"
+            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-slate-300 hover:text-white transition-all shadow-md shrink-0"
           >
             <ChevronLeft className="w-4 h-4 text-cyan-400" />
-            <span>COSMIC EXPLORER</span>
+            <span className="hidden sm:inline">COSMIC EXPLORER</span>
+            <span className="sm:hidden text-[11px]">EXIT</span>
           </Link>
 
-          <div className="h-5 w-px bg-white/10 hidden sm:block" />
+          <div className="h-5 w-px bg-white/10 hidden sm:block shrink-0" />
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-950/80 border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.4)]">
-              <Bomb className="w-4 h-4 text-red-400 animate-pulse" />
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-red-950/80 border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.4)] shrink-0">
+              <Bomb className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 animate-pulse" />
             </div>
-            <div>
-              <h1 className="text-sm sm:text-base font-bold tracking-wider uppercase font-sans text-white flex items-center gap-2">
-                PLANETARY DESTRUCTION LAB
-                <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-red-500/20 text-red-300 border border-red-500/40">
+            <div className="min-w-0">
+              <h1 className="text-xs sm:text-base font-bold tracking-wider uppercase font-sans text-white flex items-center gap-1 sm:gap-2 truncate">
+                <span className="hidden sm:inline">PLANETARY DESTRUCTION LAB</span>
+                <span className="sm:hidden">DESTRUCTION LAB</span>
+                <span className="hidden md:inline text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-red-500/20 text-red-300 border border-red-500/40 shrink-0">
                   SOLAR SMASH 3D
                 </span>
               </h1>
-              <p className="text-[10px] font-mono text-slate-400 hidden sm:block">
+              <p className="text-[10px] font-mono text-slate-400 hidden xl:block truncate">
                 Authentic 3D Earth Mesh • Physical Vertex Crater Sculpting & Ejecta Collisions
               </p>
             </div>
           </div>
         </div>
 
-        {/* Planet Switcher Quick Tabs */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-black/60 border border-white/10 backdrop-blur-md text-xs font-mono">
+        {/* Planet Switcher Quick Tabs (Scrollable on small devices) */}
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-black/60 border border-white/10 backdrop-blur-md text-xs font-mono overflow-x-auto no-scrollbar shrink-0 max-w-[44vw] sm:max-w-none">
           {Object.values(PLANETS).map((p) => {
             const isSelected = p.id === selectedPlanetKey;
             return (
               <button
                 key={p.id}
                 onClick={() => handleSelectPlanet(p.id)}
-                className={`px-2.5 py-1 rounded-lg transition-all ${
+                className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all whitespace-nowrap text-[11px] sm:text-xs ${
                   isSelected
                     ? 'bg-red-500/25 text-red-200 border border-red-400/50 shadow-[0_0_12px_rgba(239,68,68,0.3)] font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -1717,8 +1752,45 @@ export function PlanetDestructionSimulator() {
         </div>
       </header>
 
-      {/* Left Telemetry HUD */}
-      <aside className="absolute left-4 top-20 z-20 pointer-events-none flex flex-col gap-3 font-mono text-xs w-72">
+      {/* Mobile Floating Action Triggers (Visible on < lg, Hidden on Desktop) */}
+      <div className="absolute top-14 sm:top-16 left-3 right-3 z-20 flex items-center justify-between pointer-events-none lg:hidden">
+        {/* Mobile Telemetry Trigger */}
+        <button
+          onClick={() => setMobileTelemetryOpen(true)}
+          className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/90 border border-red-500/35 backdrop-blur-xl shadow-[0_0_15px_rgba(239,68,68,0.2)] text-xs font-mono active:scale-95 transition-all text-white"
+        >
+          <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
+          <span
+            className={`font-bold ${
+              integrity > 60
+                ? 'text-emerald-400'
+                : integrity > 25
+                ? 'text-amber-400'
+                : 'text-red-500 animate-pulse'
+            }`}
+          >
+            {integrity.toFixed(0)}%
+          </span>
+          <span className="text-[10px] text-slate-400 hidden xs:inline">STATUS</span>
+        </button>
+
+        {/* Mobile Arsenal Trigger */}
+        <button
+          onClick={() => setMobileArsenalOpen(true)}
+          className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/90 border border-red-500/35 backdrop-blur-xl shadow-[0_0_15px_rgba(239,68,68,0.2)] text-xs font-mono active:scale-95 transition-all text-white"
+        >
+          <span className="shrink-0">{getWeaponIcon(activeWeapon)}</span>
+          <span className="font-bold text-white max-w-[85px] sm:max-w-[120px] truncate text-[11px] sm:text-xs">
+            {getWeaponName(activeWeapon)}
+          </span>
+          <span className="text-[9px] px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-500/40">
+            {blastPower}x
+          </span>
+        </button>
+      </div>
+
+      {/* Left Telemetry HUD (Desktop lg:flex only) */}
+      <aside className="hidden lg:flex absolute left-4 top-20 z-20 pointer-events-none flex-col gap-3 font-mono text-xs w-72">
         {/* Planetary Integrity Gauge */}
         <div className="pointer-events-auto p-4 rounded-2xl bg-slate-950/85 border border-red-500/25 backdrop-blur-2xl shadow-[0_0_30px_rgba(239,68,68,0.15)] flex flex-col gap-2.5">
           <div className="flex items-center justify-between border-b border-white/10 pb-2">
@@ -1826,8 +1898,8 @@ export function PlanetDestructionSimulator() {
         </div>
       </aside>
 
-      {/* Right Arsenal Dock (Weapons Selector) */}
-      <aside className="absolute right-4 top-20 z-20 pointer-events-auto flex flex-col gap-2 font-mono">
+      {/* Right Arsenal Dock (Weapons Selector - Desktop lg:flex only) */}
+      <aside className="hidden lg:flex absolute right-4 top-20 z-20 pointer-events-auto flex-col gap-2 font-mono">
         <div className="p-2.5 rounded-2xl bg-slate-950/85 border border-red-500/25 backdrop-blur-2xl shadow-[0_0_35px_rgba(239,68,68,0.2)] flex flex-col gap-1.5 w-64">
           <div className="px-2 py-1 text-[10px] uppercase font-bold tracking-widest text-red-400 border-b border-white/10 flex items-center justify-between">
             <span>TACTICAL ARSENAL</span>
@@ -2015,57 +2087,273 @@ export function PlanetDestructionSimulator() {
         </div>
       </aside>
 
+      {/* Mobile Telemetry Drawer Modal */}
+      <AnimatePresence>
+        {mobileTelemetryOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden flex items-end sm:items-center justify-center p-2 sm:p-4 animate-in fade-in"
+            onClick={() => setMobileTelemetryOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl bg-slate-950/95 border border-red-500/40 p-4 shadow-2xl space-y-3 font-mono text-xs"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                <span className="flex items-center gap-1.5 text-red-400 font-bold uppercase tracking-wider text-[11px]">
+                  <ShieldAlert className="w-4 h-4 text-red-400" />
+                  PLANETARY INTEGRITY
+                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-sm font-bold ${
+                      integrity > 60
+                        ? 'text-emerald-400'
+                        : integrity > 25
+                        ? 'text-amber-400'
+                        : 'text-red-500 animate-pulse'
+                    }`}
+                  >
+                    {integrity.toFixed(1)}%
+                  </span>
+                  <button
+                    onClick={() => setMobileTelemetryOpen(false)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full h-3 rounded-full bg-slate-900 border border-white/10 overflow-hidden p-0.5">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    integrity > 60
+                      ? 'bg-gradient-to-r from-emerald-500 to-cyan-400 shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                      : integrity > 25
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-400 shadow-[0_0_12px_rgba(245,158,11,0.5)]'
+                      : 'bg-gradient-to-r from-red-600 to-rose-400 shadow-[0_0_15px_rgba(239,68,68,0.8)]'
+                  }`}
+                  style={{ width: `${integrity}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">STATUS:</span>
+                <span className={`font-bold ${status.color}`}>{status.text}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5 flex flex-col">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Skull className="w-3 h-3 text-rose-400" /> POPULATION
+                  </span>
+                  <span className="font-bold text-slate-100 mt-0.5 truncate">
+                    {population > 1000000
+                      ? `${(population / 1000000000).toFixed(2)}B`
+                      : population.toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5 flex flex-col">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Thermometer className="w-3 h-3 text-orange-400" /> SURFACE TEMP
+                  </span>
+                  <span className="font-bold text-orange-300 mt-0.5">
+                    {temperature > 0 ? `+${temperature}` : temperature}°C
+                  </span>
+                </div>
+
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5 flex flex-col">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <CircleDot className="w-3 h-3 text-yellow-400" /> CRATERS
+                  </span>
+                  <span className="font-bold text-slate-100 mt-0.5">{cratersCount}</span>
+                </div>
+
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5 flex flex-col">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Gauge className="w-3 h-3 text-purple-400" /> TOTAL YIELD
+                  </span>
+                  <span className="font-bold text-purple-300 mt-0.5 truncate">
+                    {megatonsYield.toLocaleString()} MT
+                  </span>
+                </div>
+              </div>
+
+              {/* Guidance summary */}
+              <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 text-[11px] text-slate-300">
+                <div className="text-cyan-400 font-bold mb-0.5 text-[10px] uppercase flex items-center gap-1">
+                  <Crosshair className="w-3 h-3" /> ACTIVE: {getWeaponName(activeWeapon)}
+                </div>
+                <p className="text-[10px] text-slate-400 leading-snug">
+                  Tap anywhere on the 3D planet to strike with real vertex mesh craters and ejecta physics.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setMobileTelemetryOpen(false)}
+                className="w-full py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-center text-xs"
+              >
+                CLOSE TELEMETRY
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Arsenal Drawer Modal */}
+      <AnimatePresence>
+        {mobileArsenalOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden flex items-end sm:items-center justify-center p-2 sm:p-4 animate-in fade-in"
+            onClick={() => setMobileArsenalOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md max-h-[85vh] rounded-2xl bg-slate-950/95 border border-red-500/40 p-3.5 sm:p-4 shadow-2xl flex flex-col font-mono text-xs"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2">
+                <span className="flex items-center gap-1.5 text-red-400 font-bold uppercase tracking-wider text-[11px]">
+                  <Bomb className="w-4 h-4 text-red-400" />
+                  TACTICAL ARSENAL (9 WEAPONS)
+                </span>
+                <button
+                  onClick={() => setMobileArsenalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Scrollable Weapons List */}
+              <div className="overflow-y-auto max-h-[46vh] pr-1 space-y-1.5 custom-scrollbar">
+                {[
+                  { id: 'nuke_tsar', name: 'Tsar Bomba ICBM', desc: 'Nuclear Flash & 3D Crater Dents', icon: <Radio className="w-4 h-4 text-rose-400" />, activeClass: 'bg-rose-500/20 border-rose-500/50' },
+                  { id: 'nuke_cluster', name: 'MIRV Cluster Strike', desc: '6 Multi-Warhead Impacts', icon: <Bomb className="w-4 h-4 text-red-400" />, activeClass: 'bg-red-500/20 border-red-500/50' },
+                  { id: 'cruise_missile', name: 'Cruise Missile', desc: 'Hypersonic Precision Strike', icon: <Rocket className="w-4 h-4 text-orange-400" />, activeClass: 'bg-orange-500/20 border-orange-500/50' },
+                  { id: 'meteor', name: 'Giant Asteroid', desc: 'Cataclysmic 3D Rim Impact', icon: <Flame className="w-4 h-4 text-amber-400" />, activeClass: 'bg-amber-500/20 border-amber-500/50' },
+                  { id: 'laser', name: 'Orbital Superlaser', desc: 'Real-Time Canyon Sculpting', icon: <Zap className="w-4 h-4 text-red-400" />, activeClass: 'bg-red-500/20 border-red-500/50' },
+                  { id: 'core_bomb', name: 'Antimatter Core Detonator', desc: 'Global Crust Rupture', icon: <AlertTriangle className="w-4 h-4 text-red-500" />, activeClass: 'bg-red-600/30 border-red-500' },
+                  { id: 'freeze', name: 'Glacial Cryo Beam', desc: 'Instant Ice Sheet Glaze', icon: <Snowflake className="w-4 h-4 text-cyan-400" />, activeClass: 'bg-cyan-500/20 border-cyan-500/50' },
+                  { id: 'slicer', name: 'Plasma Cutter Grid', desc: 'Tectonic Slicer Blades', icon: <Crosshair className="w-4 h-4 text-yellow-400" />, activeClass: 'bg-yellow-500/20 border-yellow-500/50' },
+                  { id: 'blackhole', name: 'Micro Black Hole', desc: 'Spacetime Rupture', icon: <CircleDot className="w-4 h-4 text-purple-400" />, activeClass: 'bg-purple-500/20 border-purple-500/50' },
+                ].map((w) => {
+                  const isSelected = activeWeapon === w.id;
+                  return (
+                    <button
+                      key={w.id}
+                      onClick={() => {
+                        setActiveWeapon(w.id as WeaponType);
+                        setMobileArsenalOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all ${
+                        isSelected
+                          ? `${w.activeClass} text-white border shadow-md font-bold`
+                          : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-black/60 border border-white/10 flex items-center justify-center shrink-0">
+                        {w.icon}
+                      </div>
+                      <div className="flex-1 truncate">
+                        <div className="text-xs">{w.name}</div>
+                        <div className="text-[10px] text-slate-400 truncate">{w.desc}</div>
+                      </div>
+                      {isSelected && (
+                        <span className="text-[10px] font-bold text-red-400 uppercase shrink-0">READY</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Blast Power Intensity Slider */}
+              <div className="mt-2 p-2.5 rounded-xl bg-slate-900/80 border border-white/10 flex flex-col gap-1 text-xs">
+                <div className="flex justify-between items-center text-[10px] text-slate-400">
+                  <span>WARHEAD CALIBER</span>
+                  <span className="text-red-400 font-bold">{blastPower}x</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="3.0"
+                  step="0.1"
+                  value={blastPower}
+                  onChange={(e) => setBlastPower(parseFloat(e.target.value))}
+                  className="w-full accent-red-500 cursor-pointer"
+                />
+              </div>
+
+              <button
+                onClick={() => setMobileArsenalOpen(false)}
+                className="mt-2 w-full py-2 rounded-xl bg-red-600/80 hover:bg-red-500 text-white font-bold text-center text-xs shadow-lg"
+              >
+                ENGAGE TARGET (FIRE)
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Bottom Control Bar */}
-      <footer className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-auto flex items-center gap-2 p-2 rounded-2xl bg-slate-950/85 border border-white/10 backdrop-blur-2xl shadow-2xl font-mono text-xs">
+      <footer className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-auto flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-2xl bg-slate-950/90 border border-white/10 backdrop-blur-2xl shadow-2xl font-mono text-xs max-w-[96vw] overflow-x-auto no-scrollbar">
         {/* Genesis Restore Planet Button */}
         <button
           onClick={handleGenesisReset}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600/80 to-teal-500/80 hover:from-emerald-500 hover:to-teal-400 text-white font-bold border border-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.35)] transition-all hover:scale-105 active:scale-95 cursor-pointer"
+          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-emerald-600/80 to-teal-500/80 hover:from-emerald-500 hover:to-teal-400 text-white font-bold border border-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.35)] transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
           title="Restore celestial body to pristine condition (Morph back into smooth sphere)"
         >
-          <RotateCcw className={`w-4 h-4 ${isRestoring ? 'animate-spin text-emerald-300' : ''}`} />
-          <span>GENESIS RESTORE</span>
+          <RotateCcw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isRestoring ? 'animate-spin text-emerald-300' : ''}`} />
+          <span className="hidden sm:inline">GENESIS RESTORE</span>
+          <span className="sm:hidden text-xs">RESTORE</span>
         </button>
 
-        <div className="h-6 w-px bg-white/10" />
+        <div className="h-5 sm:h-6 w-px bg-white/10 shrink-0" />
 
         {/* Pause/Spin Toggle */}
         <button
           onClick={() => setIsPaused(!isPaused)}
-          className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+          className={`p-2 sm:p-2.5 rounded-xl border transition-all cursor-pointer shrink-0 ${
             isPaused
               ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
               : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
           }`}
           title={isPaused ? 'Resume planetary rotation' : 'Freeze rotation for precision aim'}
         >
-          {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+          {isPaused ? <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
         </button>
 
         {/* Slow Motion Matrix Mode Toggle */}
         <button
           onClick={() => setTimeScale(timeScale === 1.0 ? 0.25 : 1.0)}
-          className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+          className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${
             timeScale < 1.0
               ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
               : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
           }`}
           title="Toggle Slow-Motion Impact Physics"
         >
-          {timeScale < 1.0 ? '0.25x SLOW-MO' : '1.0x NORMAL'}
+          {timeScale < 1.0 ? '0.25x' : '1.0x'} <span className="hidden sm:inline">{timeScale < 1.0 ? 'SLOW-MO' : 'NORMAL'}</span>
         </button>
 
         {/* Sound FX Toggle */}
         <button
           onClick={toggleSound}
-          className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+          className={`p-2 sm:p-2.5 rounded-xl border transition-all cursor-pointer shrink-0 ${
             isSoundMuted
               ? 'bg-red-500/20 text-red-300 border-red-500/40'
               : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
           }`}
           title={isSoundMuted ? 'Unmute Destruction SFX' : 'Mute Destruction SFX'}
         >
-          {isSoundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          {isSoundMuted ? <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
         </button>
       </footer>
     </div>

@@ -19,35 +19,35 @@ export function MultiverseModal() {
     MULTIVERSE_ENCYCLOPEDIA[0];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="w-full max-w-4xl max-h-[88vh] rounded-2xl bg-slate-950/95 border border-purple-500/30 shadow-[0_0_60px_rgba(168,85,247,0.25)] backdrop-blur-2xl flex flex-col overflow-hidden text-white font-sans"
+        className="w-full max-w-4xl max-h-[92vh] sm:max-h-[88vh] rounded-2xl bg-slate-950/95 border border-purple-500/30 shadow-[0_0_60px_rgba(168,85,247,0.25)] backdrop-blur-2xl flex flex-col overflow-hidden text-white font-sans"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-purple-500/20 bg-gradient-to-r from-purple-950/40 via-slate-900/40 to-transparent">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-purple-500/20 border border-purple-400/40 shadow-[0_0_15px_rgba(168,85,247,0.4)]">
-              <Layers className="w-5 h-5 text-purple-300" />
+        <div className="flex items-center justify-between p-3.5 sm:p-5 border-b border-purple-500/20 bg-gradient-to-r from-purple-950/40 via-slate-900/40 to-transparent">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-xl bg-purple-500/20 border border-purple-400/40 shadow-[0_0_15px_rgba(168,85,247,0.4)] shrink-0">
+              <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-purple-300" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold tracking-tight text-white">
-                  MULTIVERSE & COSMOLOGICAL TAXONOMY
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h2 className="text-sm sm:text-base md:text-lg font-bold tracking-tight text-white">
+                  MULTIVERSE & COSMOLOGY
                 </h2>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-900/60 text-purple-200 border border-purple-500/40">
-                  THEORETICAL PHYSICS ARCHIVE
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-purple-900/60 text-purple-200 border border-purple-500/40">
+                  THEORETICAL ARCHIVE
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono">
-                From Tegmark Levels I–IV to String Landscape Flux Vacua & Holographic Dualities
+              <p className="text-[10px] sm:text-xs text-slate-400 font-mono line-clamp-1">
+                Tegmark Levels I–IV • String Landscape Flux Vacua • Holographic Dualities
               </p>
             </div>
           </div>
 
           <button
             onClick={() => toggleMultiverseModal(false)}
-            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 sm:p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -55,9 +55,9 @@ export function MultiverseModal() {
 
         {/* Content Layout: Left Nav + Right Dossier */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden divide-y md:divide-y-0 md:divide-x divide-white/10">
-          {/* Left Tier Switcher */}
-          <div className="w-full md:w-64 p-3 bg-slate-900/40 overflow-y-auto space-y-1.5 shrink-0">
-            <div className="text-[10px] font-mono uppercase tracking-widest text-slate-400 px-2 pb-1">
+          {/* Tier Switcher (Horizontal scroll on mobile, vertical on desktop) */}
+          <div className="w-full md:w-64 p-2 sm:p-3 bg-slate-900/40 flex md:flex-col overflow-x-auto md:overflow-y-auto no-scrollbar gap-1.5 shrink-0">
+            <div className="text-[10px] font-mono uppercase tracking-widest text-slate-400 px-2 py-1 shrink-0 hidden md:block">
               MULTIVERSE TIERS
             </div>
             {MULTIVERSE_ENCYCLOPEDIA.map((tier) => {
@@ -66,7 +66,7 @@ export function MultiverseModal() {
                 <button
                   key={tier.id}
                   onClick={() => setActiveTierId(tier.id)}
-                  className={`w-full p-2.5 rounded-xl text-left transition-all flex flex-col ${
+                  className={`min-w-[140px] md:min-w-0 md:w-full p-2 sm:p-2.5 rounded-xl text-left transition-all flex flex-col shrink-0 cursor-pointer ${
                     isActive
                       ? 'bg-purple-500/25 text-purple-200 border border-purple-400/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]'
                       : 'hover:bg-white/5 text-slate-300 border border-transparent'

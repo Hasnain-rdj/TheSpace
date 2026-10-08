@@ -43,7 +43,7 @@ export function DataPanel() {
     CELESTIAL_BODIES[(currentIndex + 1) % CELESTIAL_BODIES.length];
 
   return (
-    <div className="fixed right-0 top-0 bottom-0 z-30 pointer-events-none flex items-center pr-3 md:pr-6">
+    <div className="fixed right-0 top-0 bottom-0 z-30 pointer-events-none flex items-center pr-2 sm:pr-4 md:pr-6">
       <AnimatePresence>
         {isDataPanelOpen && (
           <motion.div
@@ -51,7 +51,7 @@ export function DataPanel() {
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 80, scale: 0.95 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="pointer-events-auto w-[92vw] sm:w-[420px] max-h-[88vh] rounded-2xl bg-slate-950/85 backdrop-blur-2xl border border-cyan-500/25 shadow-[0_0_50px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden text-slate-100 font-sans"
+            className="pointer-events-auto w-[94vw] sm:w-[420px] max-h-[84vh] sm:max-h-[88vh] rounded-2xl bg-slate-950/90 backdrop-blur-2xl border border-cyan-500/25 shadow-[0_0_50px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden text-slate-100 font-sans"
           >
             {/* Header / Identification Banner */}
             <div className="relative p-5 pb-4 border-b border-white/10 bg-gradient-to-b from-cyan-950/30 to-transparent">
