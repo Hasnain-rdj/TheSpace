@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Stars } from '@react-three/drei';
+import { OrbitControls, Stars, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -31,6 +31,9 @@ import Link from 'next/link';
 import { cosmicAudio } from '@/utils/audioSynth';
 import { getCelestialTexture } from '@/utils/textureCache';
 
+// Preload the user's authentic 3D Earth model
+useGLTF.preload('/models/Earth.glb');
+
 export type WeaponType =
   | 'nuke_tsar'
   | 'nuke_cluster'
@@ -46,6 +49,7 @@ interface PlanetConfig {
   id: string;
   name: string;
   texture: string;
+  modelUrl?: string;
   radius: number;
   rotationSpeed: number;
   initialPopulation: number;
@@ -58,7 +62,8 @@ const PLANETS: Record<string, PlanetConfig> = {
   earth: {
     id: 'earth',
     name: 'Earth (Terra)',
-    texture: '/textures/earth_day.jpg',
+    texture: '/textures/1_earth_8k.jpg',
+    modelUrl: '/models/Earth.glb',
     radius: 5.5,
     rotationSpeed: 0.002,
     initialPopulation: 8054000000,
@@ -126,6 +131,18 @@ interface ImpactParticle {
   maxLife: number;
 }
 
+interface EjectaChunk {
+  id: string;
+  pos: THREE.Vector3;
+  vel: THREE.Vector3;
+  rot: THREE.Euler;
+  rotVel: THREE.Vector3;
+  scale: number;
+  life: number;
+  maxLife: number;
+  color: string;
+}
+
 interface Projectile {
   id: string;
   type: 'cruise_missile' | 'nuke_tsar' | 'cluster_warhead' | 'meteor';
@@ -163,7 +180,6 @@ interface ActiveBlackHole {
 
 // 3D Volumetric Mushroom Cloud Component
 function MushroomCloudView({ cloud }: { cloud: ActiveMushroomCloud }) {
-  const groupRef = useRef<THREE.Group>(null);
   const p = cloud.progress; // 0 to 1
 
   // Height of stem rises
@@ -336,6 +352,8 @@ interface DestructionSceneProps {
   onDamageApplied: (amount: number, casualties: number, tempDelta: number) => void;
   triggerScreenFlash: (color: string, intensity: number) => void;
   resetTrigger: number;
+  isRestoring: boolean;
+  onRestoringFinished: () => void;
 }
 
 function DestructionScene({
@@ -348,6 +366,8 @@ function DestructionScene({
   onDamageApplied,
   triggerScreenFlash,
   resetTrigger,
+  isRestoring,
+  onRestoringFinished,
 }: DestructionSceneProps) {
   const { camera } = useThree();
   const planetMeshRef = useRef<THREE.Mesh>(null);
@@ -359,7 +379,36 @@ function DestructionScene({
   const cameraShakeRef = useRef<number>(0);
   const originalCamPosRef = useRef<THREE.Vector3 | null>(null);
 
-  // Synchronous NASA texture
+  // Load the user's authentic 3D Earth model
+  const earthGLTF = useGLTF('/models/Earth.glb');
+
+  // Build the baseline high-density geometry (from 3D model if Earth, or 128x128 sphere)
+  const baseGeometry = useMemo(() => {
+    if (planet.id === 'earth') {
+      let geo: THREE.BufferGeometry | null = null;
+      earthGLTF.scene.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh && !geo) {
+          geo = (child as THREE.Mesh).geometry.clone();
+          geo.scale(planet.radius, planet.radius, planet.radius);
+          geo.computeVertexNormals();
+        }
+      });
+      if (geo) return geo;
+    }
+    return new THREE.SphereGeometry(planet.radius, 128, 128);
+  }, [planet.id, planet.radius, earthGLTF.scene]);
+
+  // Active mutable geometry that gets physically deformed on impact
+  const activeGeometry = useMemo(() => {
+    return baseGeometry.clone();
+  }, [baseGeometry, resetTrigger]);
+
+  // Store original positions for measuring depth, rim elevation, and smooth restoration
+  const originalPositions = useMemo(() => {
+    return new Float32Array(baseGeometry.attributes.position.array);
+  }, [baseGeometry]);
+
+  // Synchronous NASA / 8K texture
   const baseTexture = useMemo(() => {
     return getCelestialTexture(planet.texture);
   }, [planet.texture]);
@@ -379,8 +428,9 @@ function DestructionScene({
   const [laserBeamPoints, setLaserBeamPoints] = useState<[THREE.Vector3, THREE.Vector3] | null>(null);
   const lastLaserUVRef = useRef<{ u: number; v: number } | null>(null);
 
-  // Active Projectiles & Entities
+  // Active Projectiles, Ejecta & Entities
   const [projectiles, setProjectiles] = useState<Projectile[]>([]);
+  const [ejectaChunks, setEjectaChunks] = useState<EjectaChunk[]>([]);
   const [mushroomClouds, setMushroomClouds] = useState<ActiveMushroomCloud[]>([]);
   const [particles, setParticles] = useState<ImpactParticle[]>([]);
   const [shockwaves, setShockwaves] = useState<ShockwaveRing[]>([]);
@@ -389,6 +439,7 @@ function DestructionScene({
   // Reset visual effects on resetTrigger
   useEffect(() => {
     setProjectiles([]);
+    setEjectaChunks([]);
     setMushroomClouds([]);
     setParticles([]);
     setShockwaves([]);
@@ -408,7 +459,131 @@ function DestructionScene({
     return { u, v };
   }, []);
 
-  // HIGH-REALISM PROCEDURAL CRATER DEFORMATION ENGINE
+  // REAL 3D PHYSICAL VERTEX CRATER DEFORMATION ENGINE
+  const deformMeshAtPoint = useCallback(
+    (hitLocal: THREE.Vector3, type: WeaponType, power: number) => {
+      const posAttr = activeGeometry.attributes.position;
+      if (!posAttr) return;
+
+      const count = posAttr.count;
+
+      // Physical crater dimensions based on weapon caliber and power
+      let craterRadius = 1.35 * power;
+      let maxDepth = 0.65 * power;
+      let rimHeight = 0.28 * power;
+
+      if (type === 'nuke_tsar') {
+        craterRadius = 2.6 * power;
+        maxDepth = 1.15 * power;
+        rimHeight = 0.48 * power;
+      } else if (type === 'nuke_cluster') {
+        craterRadius = 1.45 * power;
+        maxDepth = 0.58 * power;
+        rimHeight = 0.24 * power;
+      } else if (type === 'cruise_missile') {
+        craterRadius = 1.05 * power;
+        maxDepth = 0.52 * power;
+        rimHeight = 0.2 * power;
+      } else if (type === 'meteor') {
+        craterRadius = 3.1 * power;
+        maxDepth = 1.45 * power;
+        rimHeight = 0.65 * power;
+      } else if (type === 'core_bomb') {
+        craterRadius = 3.9 * power;
+        maxDepth = 2.1 * power;
+        rimHeight = 0.8 * power;
+      } else if (type === 'laser') {
+        craterRadius = 0.65 * power;
+        maxDepth = 0.42 * power;
+        rimHeight = 0.1 * power;
+      }
+
+      const v = new THREE.Vector3();
+      const vNorm = new THREE.Vector3();
+      const origV = new THREE.Vector3();
+
+      for (let i = 0; i < count; i++) {
+        v.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+        origV.set(
+          originalPositions[i * 3],
+          originalPositions[i * 3 + 1],
+          originalPositions[i * 3 + 2]
+        );
+        const origRadius = origV.length();
+        const dist = v.distanceTo(hitLocal);
+
+        if (dist < craterRadius * 1.35) {
+          vNorm.copy(v).normalize();
+
+          if (dist < craterRadius) {
+            // Inner Crater Depression: Concave parabolic cavity into the planet
+            const cavityFactor = 1 - Math.pow(dist / craterRadius, 2);
+            // Jagged bedrock irregularity noise
+            const noise = 1 + (Math.sin(v.x * 20) * Math.cos(v.y * 20)) * 0.14;
+            const currentR = v.length();
+            const targetR = Math.max(origRadius * 0.45, origRadius - maxDepth * cavityFactor * noise);
+            const newR = Math.min(currentR, targetR);
+            v.copy(vNorm.multiplyScalar(newR));
+          } else {
+            // Raised Ejecta Rim: Displaced crust pushed upward/outward
+            const rimDist = dist - craterRadius;
+            const sigma = craterRadius * 0.2;
+            const rimFactor = Math.exp(-Math.pow(rimDist, 2) / (2 * Math.pow(sigma, 2)));
+            const rimNoise = 1 + Math.sin(v.z * 16 + v.x * 12) * 0.22;
+            const targetR = origRadius + rimHeight * rimFactor * rimNoise;
+            const currentR = v.length();
+            const newR = Math.max(currentR, targetR);
+            v.copy(vNorm.multiplyScalar(newR));
+          }
+
+          posAttr.setXYZ(i, v.x, v.y, v.z);
+        }
+      }
+
+      posAttr.needsUpdate = true;
+      activeGeometry.computeVertexNormals();
+    },
+    [activeGeometry, originalPositions]
+  );
+
+  // Spawn 3D Physical Debris Chunks (Ejecta Fragments)
+  const spawnEjectaChunks = useCallback(
+    (origin: THREE.Vector3, count: number) => {
+      const normal = origin.clone().normalize();
+      const newChunks: EjectaChunk[] = [];
+
+      for (let i = 0; i < count; i++) {
+        const scatter = new THREE.Vector3(
+          (Math.random() - 0.5) * 1.4,
+          (Math.random() - 0.5) * 1.4,
+          (Math.random() - 0.5) * 1.4
+        );
+        const dir = normal.clone().add(scatter).normalize();
+        const speed = Math.random() * 5 + 3.5;
+
+        newChunks.push({
+          id: Math.random().toString(),
+          pos: origin.clone().add(normal.clone().multiplyScalar(0.1)),
+          vel: dir.multiplyScalar(speed),
+          rot: new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, 0),
+          rotVel: new THREE.Vector3(
+            (Math.random() - 0.5) * 8,
+            (Math.random() - 0.5) * 8,
+            (Math.random() - 0.5) * 8
+          ),
+          scale: (Math.random() * 0.22 + 0.08) * blastPower,
+          life: 1.0,
+          maxLife: Math.random() * 1.2 + 1.2,
+          color: Math.random() < 0.6 ? '#ff4500' : '#2b1810',
+        });
+      }
+
+      setEjectaChunks((prev) => [...prev.slice(-80), ...newChunks]);
+    },
+    [blastPower]
+  );
+
+  // HIGH-REALISM PROCEDURAL CRATER DEFORMATION ENGINE (Texture Layer)
   const applyDamageToCanvas = useCallback(
     (
       u: number,
@@ -426,8 +601,6 @@ function DestructionScene({
       const y = v * h;
 
       const baseR = 14 * power;
-
-      // Seed for organic procedural noise
       const seed = Math.random() * 100;
 
       // Helper: Draw organic non-circular perimeter with multi-octave perturbation
@@ -450,7 +623,7 @@ function DestructionScene({
         ctx.closePath();
       };
 
-      // Helper: Draw realistic supersonic ejecta rays / blast spokes radiating outwards
+      // Helper: Draw realistic supersonic ejecta rays radiating outwards
       const drawEjectaRays = (cx: number, cy: number, innerR: number, outerR: number, count = 16) => {
         for (let i = 0; i < count; i++) {
           const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.25;
@@ -493,7 +666,6 @@ function DestructionScene({
             ctx.lineTo(curX, curY);
           }
 
-          // Molten magma fracture line
           ctx.strokeStyle = '#ff3700';
           ctx.lineWidth = 2.2 * power;
           ctx.shadowColor = '#ff6600';
@@ -504,12 +676,11 @@ function DestructionScene({
       };
 
       if (type === 'laser') {
-        // CONTINUOUS ORBITAL LASER: Searing Molten Trench
+        // CONTINUOUS ORBITAL LASER: Searing Molten Canyon
         if (prevUV) {
           const px = prevUV.u * w;
           const py = prevUV.v * h;
 
-          // Outer charred border
           ctx.strokeStyle = '#140500';
           ctx.lineWidth = baseR * 1.8;
           ctx.lineCap = 'round';
@@ -518,7 +689,6 @@ function DestructionScene({
           ctx.lineTo(x, y);
           ctx.stroke();
 
-          // Searing magma trench
           ctx.strokeStyle = '#ff3700';
           ctx.lineWidth = baseR * 1.1;
           ctx.beginPath();
@@ -526,7 +696,6 @@ function DestructionScene({
           ctx.lineTo(x, y);
           ctx.stroke();
 
-          // White-hot plasma core
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = baseR * 0.45;
           ctx.beginPath();
@@ -534,7 +703,6 @@ function DestructionScene({
           ctx.lineTo(x, y);
           ctx.stroke();
         } else {
-          // Stationary laser contact spot
           const grad = ctx.createRadialGradient(x, y, 0, x, y, baseR * 1.2);
           grad.addColorStop(0, '#ffffff');
           grad.addColorStop(0.3, '#ffaa00');
@@ -558,7 +726,6 @@ function DestructionScene({
         drawOrganicPath(x, y, freezeR, 32, 0.25);
         ctx.fill();
 
-        // Crystalline ice dendritic cracks
         for (let i = 0; i < 8; i++) {
           const a = (i / 8) * Math.PI * 2;
           ctx.strokeStyle = '#ffffff';
@@ -591,7 +758,7 @@ function DestructionScene({
         ctx.stroke();
         ctx.shadowBlur = 0;
       } else {
-        // EXPLOSIVE CRATERS: TSAR BOMBA, CLUSTER NUKE, CRUISE MISSILE, METEOR, CORE BOMB
+        // EXPLOSIVE IMPACT CRATERS: TSAR BOMBA, CLUSTER NUKE, CRUISE MISSILE, METEOR, CORE BOMB
         let craterRadiusMultiplier = 1.8;
         let isNuclear = false;
 
@@ -750,9 +917,21 @@ function DestructionScene({
     ]);
   }, []);
 
-  // TRIGGER WEAPON IMPACT
+  // TRIGGER WEAPON IMPACT & PHYSICAL COLLISION
   const triggerImpact = useCallback(
     (hitPoint: THREE.Vector3, type: WeaponType) => {
+      // 1. Convert hitPoint from world to local mesh coordinates
+      const hitLocal = planetMeshRef.current
+        ? planetMeshRef.current.worldToLocal(hitPoint.clone())
+        : hitPoint.clone();
+
+      // 2. REAL PHYSICAL 3D VERTEX CRATER DEFORMATION
+      deformMeshAtPoint(hitLocal, type, blastPower);
+
+      // 3. PHYSICAL 3D DEBRIS EJECTA CHUNKS FLYING INTO SPACE
+      spawnEjectaChunks(hitPoint, Math.floor(blastPower * (type === 'meteor' ? 24 : type === 'nuke_tsar' ? 20 : 14)));
+
+      // 4. Multi-layer charred & molten crater texture decal
       const { u, v } = hitPointToUV(hitPoint);
       applyDamageToCanvas(u, v, type, blastPower, type === 'laser' ? lastLaserUVRef.current : null);
 
@@ -819,6 +998,8 @@ function DestructionScene({
       }
     },
     [
+      deformMeshAtPoint,
+      spawnEjectaChunks,
       hitPointToUV,
       applyDamageToCanvas,
       blastPower,
@@ -973,7 +1154,7 @@ function DestructionScene({
   };
 
   // MAIN SIMULATION ANIMATION LOOP
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     const dt = Math.min(delta, 0.1) * timeScale;
 
     // 1. Camera Shake Effect
@@ -989,7 +1170,31 @@ function DestructionScene({
       originalCamPosRef.current = null;
     }
 
-    // 2. Planetary axial rotation
+    // 2. Smooth Genesis Planetary Healing (Vertex Morph Restoration)
+    if (isRestoring && planetMeshRef.current) {
+      const posAttr = activeGeometry.attributes.position;
+      let maxDiff = 0;
+      for (let i = 0; i < posAttr.count; i++) {
+        const cx = posAttr.getX(i);
+        const cy = posAttr.getY(i);
+        const cz = posAttr.getZ(i);
+        const ox = originalPositions[i * 3];
+        const oy = originalPositions[i * 3 + 1];
+        const oz = originalPositions[i * 3 + 2];
+        const nx = cx + (ox - cx) * 0.14;
+        const ny = cy + (oy - cy) * 0.14;
+        const nz = cz + (oz - cz) * 0.14;
+        posAttr.setXYZ(i, nx, ny, nz);
+        maxDiff = Math.max(maxDiff, Math.abs(ox - cx) + Math.abs(oy - cy) + Math.abs(oz - cz));
+      }
+      posAttr.needsUpdate = true;
+      activeGeometry.computeVertexNormals();
+      if (maxDiff < 0.005) {
+        onRestoringFinished();
+      }
+    }
+
+    // 3. Planetary axial rotation
     if (!isPaused && planetMeshRef.current) {
       planetMeshRef.current.rotation.y += planet.rotationSpeed * timeScale;
     }
@@ -1000,7 +1205,7 @@ function DestructionScene({
       coreMeshRef.current.rotation.y += planet.rotationSpeed * 0.7 * timeScale;
     }
 
-    // 3. Animate All In-Flight Projectiles (Missiles, Nukes, Meteors)
+    // 4. Animate All In-Flight Projectiles (Missiles, Nukes, Meteors)
     setProjectiles((prev) => {
       const active: Projectile[] = [];
       prev.forEach((p) => {
@@ -1020,7 +1225,6 @@ function DestructionScene({
           p.progress = newProgress;
           p.current.lerpVectors(p.start, p.target, newProgress);
 
-          // Add smoke particle trail behind rocket engine
           if (p.type !== 'meteor' && Math.random() < 0.4) {
             spawnExplosionParticles(p.current, 1, '#94a3b8', 0.2);
           }
@@ -1030,7 +1234,23 @@ function DestructionScene({
       return active;
     });
 
-    // 4. Animate 3D Mushroom Clouds
+    // 5. Animate 3D Physical Debris Chunks (Ballistic gravity trajectories)
+    setEjectaChunks((prev) => {
+      return prev
+        .map((chunk) => {
+          chunk.pos.addScaledVector(chunk.vel, dt);
+          const toCenter = chunk.pos.clone().normalize();
+          // Planetary gravitational pull
+          chunk.vel.addScaledVector(toCenter, -2.8 * dt);
+          chunk.rot.x += chunk.rotVel.x * dt;
+          chunk.rot.y += chunk.rotVel.y * dt;
+          chunk.life -= dt / chunk.maxLife;
+          return chunk;
+        })
+        .filter((chunk) => chunk.life > 0.02 && chunk.pos.length() > planet.radius * 0.82);
+    });
+
+    // 6. Animate 3D Mushroom Clouds
     setMushroomClouds((prev) => {
       return prev
         .map((mc) => ({
@@ -1040,7 +1260,7 @@ function DestructionScene({
         .filter((mc) => mc.progress < 1.0);
     });
 
-    // 5. Animate Shockwaves
+    // 7. Animate Shockwaves
     setShockwaves((prev) => {
       return prev
         .map((s) => ({
@@ -1051,7 +1271,7 @@ function DestructionScene({
         .filter((s) => s.opacity > 0.02 && s.radius < s.maxRadius);
     });
 
-    // 6. Animate Particles
+    // 8. Animate Particles
     setParticles((prev) => {
       return prev
         .map((p) => {
@@ -1062,7 +1282,7 @@ function DestructionScene({
         .filter((p) => p.life > 0.05);
     });
 
-    // 7. Animate Black Holes
+    // 9. Animate Black Holes
     setBlackHoles((prev) => {
       return prev
         .map((bh) => {
@@ -1080,15 +1300,14 @@ function DestructionScene({
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
     >
-      {/* Molten Inner Core Sphere (Visible through shattered tectonic fissures) */}
+      {/* Molten Inner Core Sphere (Exposed through 3D physical crater depressions) */}
       <mesh ref={coreMeshRef}>
         <sphereGeometry args={[planet.radius * 0.88, 36, 36]} />
         <meshBasicMaterial color="#ff3300" wireframe />
       </mesh>
 
-      {/* Main Celestial Body Sphere */}
-      <mesh ref={planetMeshRef}>
-        <sphereGeometry args={[planet.radius, 64, 64]} />
+      {/* Main 3D Model / Celestial Body with Real Physical 3D Deformed Geometry */}
+      <mesh ref={planetMeshRef} geometry={activeGeometry}>
         <meshStandardMaterial
           map={baseTexture || undefined}
           color="#ffffff"
@@ -1097,9 +1316,8 @@ function DestructionScene({
         />
       </mesh>
 
-      {/* Dynamic Molten Damage Decal Layer (Layered at radius * 1.003 with glowing emissive) */}
-      <mesh>
-        <sphereGeometry args={[planet.radius * 1.003, 64, 64]} />
+      {/* Dynamic Molten Damage Decal Layer (Using the exact same deformed 3D geometry) */}
+      <mesh geometry={activeGeometry}>
         <meshStandardMaterial
           ref={damageMatRef}
           map={damageTexture}
@@ -1109,6 +1327,10 @@ function DestructionScene({
           transparent
           opacity={0.96}
           roughness={0.8}
+          polygonOffset
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-1}
+          depthWrite={false}
         />
       </mesh>
 
@@ -1138,6 +1360,24 @@ function DestructionScene({
           />
         </mesh>
       )}
+
+      {/* 3D Physical Debris Chunks (Ejecta Fragments) */}
+      {ejectaChunks.map((chunk) => (
+        <mesh
+          key={chunk.id}
+          position={chunk.pos}
+          rotation={chunk.rot}
+          scale={chunk.scale * Math.min(1, chunk.life * 2)}
+        >
+          <dodecahedronGeometry args={[0.22, 0]} />
+          <meshStandardMaterial
+            color={chunk.color}
+            emissive={chunk.color === '#ff4500' ? '#ff3300' : '#110500'}
+            emissiveIntensity={chunk.color === '#ff4500' ? 2.8 : 0.2}
+            roughness={0.9}
+          />
+        </mesh>
+      ))}
 
       {/* 3D Orbital Superlaser Beam */}
       {laserBeamActive && laserBeamPoints && (
@@ -1275,6 +1515,7 @@ export function PlanetDestructionSimulator() {
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [timeScale, setTimeScale] = useState<number>(1.0);
   const [isSoundMuted, setIsSoundMuted] = useState<boolean>(false);
+  const [isRestoring, setIsRestoring] = useState<boolean>(false);
 
   // Screen-space detonation flash
   const [flash, setFlash] = useState<{ color: string; opacity: number } | null>(null);
@@ -1317,6 +1558,7 @@ export function PlanetDestructionSimulator() {
       const ctx = damageCanvas.getContext('2d');
       if (ctx) ctx.clearRect(0, 0, damageCanvas.width, damageCanvas.height);
     }
+    setIsRestoring(true);
     setIntegrity(100);
     setPopulation(planet.initialPopulation);
     setTemperature(planet.initialTemp);
@@ -1333,6 +1575,7 @@ export function PlanetDestructionSimulator() {
       const ctx = damageCanvas.getContext('2d');
       if (ctx) ctx.clearRect(0, 0, damageCanvas.width, damageCanvas.height);
     }
+    setIsRestoring(false);
     setIntegrity(100);
     setPopulation(newPlanet.initialPopulation);
     setTemperature(newPlanet.initialTemp);
@@ -1415,6 +1658,8 @@ export function PlanetDestructionSimulator() {
               onDamageApplied={handleDamageApplied}
               triggerScreenFlash={triggerScreenFlash}
               resetTrigger={resetTrigger}
+              isRestoring={isRestoring}
+              onRestoringFinished={() => setIsRestoring(false)}
             />
           )}
         </Canvas>
@@ -1441,11 +1686,11 @@ export function PlanetDestructionSimulator() {
               <h1 className="text-sm sm:text-base font-bold tracking-wider uppercase font-sans text-white flex items-center gap-2">
                 PLANETARY DESTRUCTION LAB
                 <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-red-500/20 text-red-300 border border-red-500/40">
-                  SOLAR SMASH ENGINE
+                  SOLAR SMASH 3D
                 </span>
               </h1>
               <p className="text-[10px] font-mono text-slate-400 hidden sm:block">
-                Nuclear Ballistics, Kinetic Impactor & Realistic Magma Destruction
+                Authentic 3D Earth Mesh • Physical Vertex Crater Sculpting & Ejecta Collisions
               </p>
             </div>
           </div>
@@ -1560,17 +1805,17 @@ export function PlanetDestructionSimulator() {
           </div>
           <p>
             {activeWeapon === 'nuke_tsar' &&
-              'Click anywhere to fire a heavy strategic nuclear ICBM. Produces a blinding nuclear flash, 3D mushroom cloud, shockwave, and irradiated molten crater.'}
+              'Click anywhere to fire a strategic Tsar Bomba ICBM. Produces real 3D physical crust deformation, blinding flash, mushroom cloud, and molten caldera.'}
             {activeWeapon === 'nuke_cluster' &&
-              'Click to deploy a MIRV cluster strike. Multiple nuclear warheads scatter and detonate sequentially with cascading mushroom clouds.'}
+              'Click to deploy a MIRV cluster strike. Multiple warheads scatter and strike the 3D model, causing cascading physical crater gouges.'}
             {activeWeapon === 'cruise_missile' &&
-              'Click to launch a precision supersonic cruise missile with high-velocity shrapnel impact and scorched crater.'}
+              'Click to launch a precision supersonic cruise missile with high-velocity kinetic crust denting and scorched ejecta.'}
             {activeWeapon === 'meteor' &&
-              'Click to summon a colossal asteroid. Cataclysmic supersonic kinetic impact blast with raised rim and ejecta rays.'}
+              'Click to summon a colossal asteroid. Cataclysmic supersonic kinetic impact blast creating massive 3D physical craters and orbital ejecta boulders.'}
             {activeWeapon === 'laser' &&
-              'Click and drag on the sphere to fire a continuous orbital laser beam carving glowing white-hot magma canyons.'}
+              'Click and drag on the sphere to continuously sculpt deep molten magma canyons directly into the 3D crust in real time.'}
             {activeWeapon === 'core_bomb' &&
-              'Click to deploy an antimatter core penetrator that burrows into the planetary core, shattering tectonic plates.'}
+              'Click to deploy an antimatter core penetrator that burrows into the core, shattering tectonic plates and exposing magma.'}
             {activeWeapon === 'freeze' &&
               'Click to fire a cryogenic beam that flash-freezes oceans and continents into glacial sheets.'}
             {activeWeapon === 'slicer' &&
@@ -1603,7 +1848,7 @@ export function PlanetDestructionSimulator() {
             </div>
             <div>
               <div className="text-xs font-bold">Tsar Bomba ICBM</div>
-              <div className="text-[9px] text-slate-400">Nuclear Flash & Mushroom Cloud</div>
+              <div className="text-[9px] text-slate-400">Nuclear Flash & 3D Crater Dents</div>
             </div>
           </button>
 
@@ -1621,7 +1866,7 @@ export function PlanetDestructionSimulator() {
             </div>
             <div>
               <div className="text-xs font-bold">MIRV Cluster Strike</div>
-              <div className="text-[9px] text-slate-400">6 Multi-Warhead Detonations</div>
+              <div className="text-[9px] text-slate-400">6 Multi-Warhead Impacts</div>
             </div>
           </button>
 
@@ -1657,7 +1902,7 @@ export function PlanetDestructionSimulator() {
             </div>
             <div>
               <div className="text-xs font-bold">Giant Asteroid</div>
-              <div className="text-[9px] text-slate-400">Supersonic Kinetic Impact</div>
+              <div className="text-[9px] text-slate-400">Cataclysmic 3D Rim Impact</div>
             </div>
           </button>
 
@@ -1675,7 +1920,7 @@ export function PlanetDestructionSimulator() {
             </div>
             <div>
               <div className="text-xs font-bold">Orbital Superlaser</div>
-              <div className="text-[9px] text-slate-400">Continuous Molten Canyon</div>
+              <div className="text-[9px] text-slate-400">Real-Time Canyon Sculpting</div>
             </div>
           </button>
 
@@ -1693,7 +1938,7 @@ export function PlanetDestructionSimulator() {
             </div>
             <div>
               <div className="text-xs font-bold">Antimatter Core Detonator</div>
-              <div className="text-[9px] text-slate-400">Global Crust Collapse</div>
+              <div className="text-[9px] text-slate-400">Global Crust Rupture</div>
             </div>
           </button>
 
@@ -1776,9 +2021,9 @@ export function PlanetDestructionSimulator() {
         <button
           onClick={handleGenesisReset}
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600/80 to-teal-500/80 hover:from-emerald-500 hover:to-teal-400 text-white font-bold border border-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.35)] transition-all hover:scale-105 active:scale-95 cursor-pointer"
-          title="Restore celestial body to pristine 100% condition"
+          title="Restore celestial body to pristine condition (Morph back into smooth sphere)"
         >
-          <RotateCcw className="w-4 h-4" />
+          <RotateCcw className={`w-4 h-4 ${isRestoring ? 'animate-spin text-emerald-300' : ''}`} />
           <span>GENESIS RESTORE</span>
         </button>
 

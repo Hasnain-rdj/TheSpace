@@ -11,7 +11,7 @@ export const PLANET_TEXTURE_MAP: Record<string, string> = {
   sun: '/textures/sun.jpg',
   mercury: '/textures/mercury.jpg',
   venus: '/textures/venus.jpg',
-  earth: '/textures/earth_day.jpg',
+  earth: '/textures/1_earth_8k.jpg',
   moon: '/textures/moon.jpg',
   mars: '/textures/mars.jpg',
   jupiter: '/textures/jupiter.jpg',

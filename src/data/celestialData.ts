@@ -561,7 +561,7 @@ export const CELESTIAL_BODIES: CelestialObject[] = [
     orbitSpeed: 0.018,
     rotationSpeed: 0.012,
     axialTilt: 23.44,
-    imageUrl: '/textures/earth_day.jpg',
+    imageUrl: '/textures/1_earth_8k.jpg',
     nasaMissionCredit: 'NASA Visible Earth Blue Marble & DSCOVR EPIC Satellite',
     visuals: {
       baseColor: '#1e90ff',

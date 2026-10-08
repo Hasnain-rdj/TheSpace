@@ -3,7 +3,10 @@
 import { useRef, useMemo, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
+import { useGLTF } from '@react-three/drei';
 import { CelestialObject } from '@/types/space';
+
+useGLTF.preload('/models/Earth.glb');
 import { useSpaceStore } from '@/store/useSpaceStore';
 import {
   SURFACE_LANDMARKS,
@@ -81,6 +84,21 @@ export function PhotorealisticPlanet({ body }: PhotorealisticPlanetProps) {
     if (body.id !== 'earth') return null;
     return getCelestialTexture('/textures/earth_clouds.png');
   }, [body.id]);
+
+  // Custom 3D Earth model provided in /models/Earth.glb
+  const earthGLTF = useGLTF('/models/Earth.glb');
+  const earthGeometry = useMemo(() => {
+    if (body.id !== 'earth') return null;
+    let geo: THREE.BufferGeometry | null = null;
+    earthGLTF.scene.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh && !geo) {
+        geo = (child as THREE.Mesh).geometry.clone();
+        geo.scale(body.size, body.size, body.size);
+        geo.computeVertexNormals();
+      }
+    });
+    return geo;
+  }, [body.id, body.size, earthGLTF.scene]);
 
   // Ensure Three.js WebGL material recompiles when texture or layer state changes
   useEffect(() => {
@@ -177,10 +195,11 @@ export function PhotorealisticPlanet({ body }: PhotorealisticPlanetProps) {
         {/* Main Photographic Planetary Sphere */}
         <mesh
           ref={planetMeshRef}
+          geometry={earthGeometry || undefined}
           castShadow
           receiveShadow
         >
-          <sphereGeometry args={[body.size, 64, 64]} />
+          {!earthGeometry && <sphereGeometry args={[body.size, 64, 64]} />}
           {body.visuals.isStar ? (
             <meshBasicMaterial
               ref={basicMatRef}
