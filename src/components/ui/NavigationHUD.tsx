@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Compass,
   Volume2,
@@ -11,6 +12,7 @@ import {
   Layers,
   Radio,
   Info,
+  Flame,
 } from 'lucide-react';
 import { useSpaceStore } from '@/store/useSpaceStore';
 import { SearchBar } from './SearchBar';
@@ -114,6 +116,17 @@ export function NavigationHUD() {
           <Radio className="w-3.5 h-3.5 text-cyan-400" />
           <span>NASA Live</span>
         </button>
+
+        {/* Planet Destruction Lab Launcher (Solar Smash Simulation) */}
+        <Link
+          href="/simulate"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-red-950/60 hover:bg-red-900/80 text-red-200 border border-red-500/40 hover:border-red-400 transition-all shadow-[0_0_15px_rgba(239,68,68,0.25)] hover:shadow-[0_0_20px_rgba(239,68,68,0.5)] group"
+          title="Open Planet Destruction Lab (Solar Smash Simulator)"
+        >
+          <Flame className="w-3.5 h-3.5 text-red-400 group-hover:scale-110 transition-transform animate-pulse" />
+          <span className="font-bold tracking-wide hidden sm:inline">Destruction Lab</span>
+          <span className="font-bold tracking-wide sm:hidden">Sim</span>
+        </Link>
 
         {/* Guided Tour Launcher */}
         <button

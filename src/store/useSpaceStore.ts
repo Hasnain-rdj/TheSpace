@@ -60,9 +60,11 @@ interface SpaceState {
   setMapLayer: (layer: MapLayerType) => void;
   setCursorCoordinates: (coords: { lat: number; lon: number } | null) => void;
 
-  // Modals
+  // Modals & Simulation Labs
+  isDestructionLabOpen: boolean;
   toggleMultiverseModal: (open?: boolean) => void;
   toggleNasaLiveFeed: (open?: boolean) => void;
+  toggleDestructionLab: (open?: boolean) => void;
 
   // Selectors
   getSelectedObject: () => CelestialObject | undefined;
@@ -87,7 +89,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   activeScale: 'planetary',
   searchQuery: '',
   isSearchOpen: false,
-  isDataPanelOpen: true,
+  isDataPanelOpen: false,
   timeSpeed: 1,
   isOrbitLinesVisible: true,
   isLabelsVisible: true,
@@ -107,6 +109,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
 
   isMultiverseModalOpen: false,
   isNasaLiveFeedOpen: false,
+  isDestructionLabOpen: false,
 
   selectObject: (id: string) => {
     const obj = CELESTIAL_BODIES.find((item) => item.id === id);
@@ -115,7 +118,6 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
     set({
       selectedObjectId: id,
       activeScale: obj.scale,
-      isDataPanelOpen: true,
       isSearchOpen: false,
       searchQuery: '',
       isTransitioning: true,
@@ -258,6 +260,12 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
     set((state) => ({
       isNasaLiveFeedOpen:
         open !== undefined ? open : !state.isNasaLiveFeedOpen,
+    })),
+
+  toggleDestructionLab: (open?: boolean) =>
+    set((state) => ({
+      isDestructionLabOpen:
+        open !== undefined ? open : !state.isDestructionLabOpen,
     })),
 
   getSelectedObject: () => {

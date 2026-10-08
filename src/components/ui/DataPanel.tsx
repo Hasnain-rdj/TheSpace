@@ -326,15 +326,34 @@ export function DataPanel() {
         )}
       </AnimatePresence>
 
-      {/* Floating Toggle Button when Closed */}
-      {!isDataPanelOpen && (
-        <button
-          onClick={() => toggleDataPanel(true)}
-          className="pointer-events-auto p-3 rounded-full bg-slate-900/90 text-cyan-400 hover:text-cyan-300 border border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.25)] backdrop-blur-md transition-all hover:scale-105"
-          title="Open Celestial Data Panel"
+      {/* Floating Planet Information Pill Button when Closed */}
+      {!isDataPanelOpen && body && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          className="pointer-events-auto"
         >
-          <Info className="w-5 h-5" />
-        </button>
+          <button
+            onClick={() => toggleDataPanel(true)}
+            className="group flex items-center gap-2.5 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-slate-950/85 hover:bg-slate-900 border border-cyan-500/35 hover:border-cyan-400 text-slate-200 hover:text-white shadow-[0_0_25px_rgba(6,182,212,0.25)] hover:shadow-[0_0_35px_rgba(6,182,212,0.5)] backdrop-blur-2xl transition-all duration-300 font-mono cursor-pointer"
+            title={`View ${body.name} Scientific Dossier & Telemetry`}
+          >
+            <div className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-cyan-950/80 border border-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.4)] group-hover:scale-105 transition-transform shrink-0">
+              <Info className="w-4 h-4 text-cyan-300" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            </div>
+            <div className="flex flex-col text-left pr-1">
+              <span className="text-[11px] font-bold text-cyan-300 tracking-wider uppercase group-hover:text-white transition-colors">
+                {landmark ? landmark.name : body.name}
+              </span>
+              <span className="text-[9px] text-slate-400 font-mono">
+                {landmark ? 'SURFACE DOSSIER' : 'PLANET INFO & DATA'}
+              </span>
+            </div>
+            <ChevronLeft className="w-4 h-4 text-cyan-400 group-hover:-translate-x-1 transition-transform" />
+          </button>
+        </motion.div>
       )}
     </div>
   );
